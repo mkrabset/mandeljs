@@ -11,7 +11,7 @@ function mandel(x, y, max) {
     while (n < max) {
         const a2 = a * a
         const b2 = b * b
-        if (a2 + b2 > 4) return n
+        if (a2 + b2 > 4) break
         b = 2 * a * b + y
         a = a2 - b2 + x
         n++
@@ -19,18 +19,36 @@ function mandel(x, y, max) {
     return n
 }
 
+// The mandelbrot function
+function traceMandel(x, y, max) {
+    const result = []
+    let n = 0
+    let a = x
+    let b = y
+    while (n < max) {
+        result.push([a, b])
+        const a2 = a * a
+        const b2 = b * b
+        if (a2 + b2 > 4) break
+        b = 2 * a * b + y
+        a = a2 - b2 + x
+        n++
+    }
+    return result
+}
+
 // Applies histogram equalization to given array of n-values, with max as maximum value
 function normalize(ns, max) {
     const hist = new Array(max).fill(0)
     ns.filter(n => n < max).forEach(n => hist[n]++)
-    
+
     const cumul = new Array(max).fill(0)
     cumul[0] = hist[0]
     for (let i = 1; i < max; i++) {
         cumul[i] = cumul[i - 1] + hist[i]
     }
 
-    const div=cumul[cumul.length-1] / max
+    const div = cumul[cumul.length - 1] / max
     return ns.map(n => (n === max) ? max : Math.ceil(cumul[n] / div))
 }
 
@@ -121,6 +139,7 @@ function onload() {
 
     // Upper left corner of current zooming selection
     let start = [0, 0]
+    let mousePos = [0, 0]
 
     // Extracts canvas coordinates for mouse event
     const canvasPos = (e) => {
@@ -155,6 +174,7 @@ function onload() {
     // Handler for mouse move
     // During selection it draws selection rectangle
     const mouseMove = (e) => {
+        mousePos = canvasPos(e)
         if (mDown) {
             const end = endPos(e)
             const w = end[0] - start[0]
@@ -197,6 +217,25 @@ function onload() {
             yRange = zoomOut(yRange)
             update()
             redraw()
+        } else if (e.key === 't') {
+            console.log({mousePos})
+
+            const realPos = [map(0, w, xRange[0], xRange[1], mousePos[0]), map(0, h, yRange[0], yRange[1], mousePos[1])]
+            console.log({realPos})
+
+            const trace = traceMandel(realPos[0], realPos[1], max)
+            console.log({trace})
+
+            const pixTrace = trace.map(p => [map(xRange[0], xRange[1], 0, w, p[0]), map(yRange[0], yRange[1], 0, h, p[1])])
+            console.log({pixTrace})
+
+            redraw()
+            ctx.beginPath()
+            ctx.strokeStyle = '#f48'
+            ctx.strokeWidth = 1
+            ctx.moveTo(...pixTrace[0])
+            pixTrace.forEach(p => ctx.lineTo(...p))
+            ctx.stroke()
         }
     }
 
